@@ -29,10 +29,11 @@ type Decoder struct {
 // the decoder would receive if it were producing the
 // exact correct result at every timestep.
 func (d *Decoder) Guided(encoded anydiff.Res, guide anyseq.Seq, batchSize int) anyseq.Seq {
-	start := d.vecToState(encoded.Output(), batchSize)
+	mapped := d.StateMapper.Apply(encoded, batchSize)
+	start := d.vecToState(mapped.Output(), batchSize)
 	startProp := func(sg anyrnn.StateGrad, g anydiff.Grad) {
 		ds := d.stateToVec(sg, batchSize)
-		encoded.Propagate(ds, g)
+		mapped.Propagate(ds, g)
 	}
 	return anyrnn.MapWithStart(guide, d.Block, start, startProp)
 }
