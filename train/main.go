@@ -4,7 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
+	"time"
 
 	"github.com/unixpickle/anynet/anysgd"
 	"github.com/unixpickle/anyvec/anyvec32"
@@ -14,6 +16,8 @@ import (
 )
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
+
 	var dataPath string
 	var encPath string
 	var decPath string
