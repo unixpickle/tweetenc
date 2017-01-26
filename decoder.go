@@ -6,7 +6,6 @@ import (
 	"github.com/unixpickle/anynet"
 	"github.com/unixpickle/anynet/anyrnn"
 	"github.com/unixpickle/anyvec"
-	"github.com/unixpickle/anyvec/anyvec32"
 )
 
 // A Decoder decodes vectors into strings of bytes.
@@ -22,8 +21,7 @@ type Decoder struct {
 }
 
 // NewDecoder creates a Decoder with a default structure.
-func NewDecoder(encodedSize int) *Decoder {
-	c := anyvec32.CurrentCreator()
+func NewDecoder(c anyvec.Creator, encodedSize int) *Decoder {
 	return &Decoder{
 		Block: anyrnn.Stack{
 			anyrnn.NewLSTM(c, 0x100, 512),

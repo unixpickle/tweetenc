@@ -82,6 +82,7 @@ func (t *Trainer) Gradient(b anysgd.Batch) anydiff.Grad {
 		}
 	}
 	cost := t.TotalCost(b)
+	t.LastCost = anyvec.Sum(cost.Output())
 	data := cost.Output().Creator().MakeNumericList([]float64{1})
 	upstream := cost.Output().Creator().MakeVectorData(data)
 	cost.Propagate(upstream, res)
