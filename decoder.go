@@ -6,6 +6,7 @@ import (
 	"github.com/unixpickle/anynet"
 	"github.com/unixpickle/anynet/anyrnn"
 	"github.com/unixpickle/anyvec"
+	"github.com/unixpickle/anyvec/anyvec32"
 )
 
 // A Decoder decodes vectors into strings of bytes.
@@ -17,7 +18,27 @@ type Decoder struct {
 
 	// StateMapper maps the vectors from the encoder to state
 	// vectors for the decoder block.
-	StateMapper anynet.Net
+	StateMapper anynet.Layer
+}
+
+// NewDecoder creates a Decoder with a default structure.
+func NewDecoder(encodedSize int) *Decoder {
+	c := anyvec32.CurrentCreator()
+	return &Decoder{
+		Block: anyrnn.Stack{
+			anyrnn.NewLSTM(c, 0x100, 512),
+			anyrnn.NewLSTM(c, 512, 512),
+			&anyrnn.LayerBlock{
+				Layer: anynet.Net{
+					anynet.NewFC(c, 512, 0x100),
+					anynet.LogSoftmax,
+				},
+			},
+		},
+		StateMapper: anynet.Net{
+			anynet.NewFC(c, encodedSize, 512*4),
+		},
+	}
 }
 
 // Guided decodes the batch of vectors and produces
