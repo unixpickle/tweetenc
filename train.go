@@ -1,7 +1,6 @@
 package tweetenc
 
 import (
-	"crypto/md5"
 	"errors"
 
 	"github.com/unixpickle/anydiff"
@@ -10,30 +9,6 @@ import (
 	"github.com/unixpickle/anynet/anysgd"
 	"github.com/unixpickle/anyvec"
 )
-
-// A SampleList is a list of textual samples.
-type SampleList [][]byte
-
-// Len returns the sample count.
-func (s SampleList) Len() int {
-	return len(s)
-}
-
-// Swap swaps two samples.
-func (s SampleList) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-
-// Slice returns a shallow copy of the slice.
-func (s SampleList) Slice(start, end int) anysgd.SampleList {
-	return append(SampleList{}, s[start:end]...)
-}
-
-// Hash returns a hash of the sample.
-func (s SampleList) Hash(i int) []byte {
-	res := md5.Sum(s[i])
-	return res[:]
-}
 
 // A Trainer is an anysgd.Fetcher and anysgd.Gradienter
 // for training an encoder/decoder pair.
