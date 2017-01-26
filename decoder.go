@@ -57,6 +57,27 @@ func (d *Decoder) Guided(encoded anydiff.Res, guide anyseq.Seq, batchSize int) a
 	return anyrnn.MapWithStart(guide, d.Block, start, startProp)
 }
 
+// Unguided reconstructs a sequence from a feature vector
+// without any guiding input sequence.
+func (d *Decoder) Unguided(encoded anyvec.Vector) []byte {
+	mapped := d.StateMapper.Apply(anydiff.NewConst(encoded), 1)
+	state := d.vecToState(mapped.Output(), 1)
+	input := oneHot(encoded.Creator(), 0)
+	res := []byte{}
+	for {
+		next := d.Block.Step(state, input)
+		state = next.State()
+
+		max := byte(anyvec.MaxIndex(next.Output()))
+		if max == 0 {
+			break
+		}
+		res = append(res, max)
+		input = oneHot(encoded.Creator(), max)
+	}
+	return res
+}
+
 func (d *Decoder) vecToState(vec anyvec.Vector, batchSize int) anyrnn.State {
 	cols := vec.Len() / batchSize
 	perBatch := make([]anyvec.Vector, batchSize)

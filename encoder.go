@@ -43,3 +43,15 @@ func (e *Encoder) Apply(seqs anyseq.Seq) anydiff.Res {
 	outSeq := anyrnn.Map(seqs, e.Block)
 	return anyseq.Tail(outSeq)
 }
+
+// Encode encodes a string to a vector.
+func (e *Encoder) Encode(s string) anyvec.Vector {
+	inSeq := []anyvec.Vector{}
+	cr := e.Block.(anynet.Parameterizer).Parameters()[0].Vector.Creator()
+	for _, x := range []byte(s) {
+		inSeq = append(inSeq, oneHot(cr, x))
+	}
+	inSeq = append(inSeq, oneHot(cr, 0))
+	seqs := anyseq.ConstSeqList([][]anyvec.Vector{inSeq})
+	return e.Apply(seqs).Output()
+}
