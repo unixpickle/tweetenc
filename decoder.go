@@ -74,6 +74,7 @@ func (d *Decoder) vecToState(vec anyvec.Vector, batchSize int) anyrnn.State {
 		start := lstm.Start(batchSize).(*anyrnn.LSTMState)
 		moveIntoVecState(perBatch, start.Internal)
 		moveIntoVecState(perBatch, start.LastOut)
+		outState[i] = start
 	}
 
 	return outState
