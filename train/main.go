@@ -74,7 +74,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Failed to save encoder:", err)
 		os.Exit(1)
 	}
-	if err := serializer.SaveAny(encPath, dec.Block, dec.StateMapper); err != nil {
+	if err := serializer.SaveAny(decPath, dec.Block, dec.StateMapper); err != nil {
 		fmt.Fprintln(os.Stderr, "Failed to save decoder:", err)
 		os.Exit(1)
 	}
