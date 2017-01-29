@@ -29,7 +29,8 @@ func NewEncoder(c anyvec.Creator, encodedSize int) *Encoder {
 	}
 }
 
-// Apply applies the encoder to an input sequence.
+// Apply applies the encoder to an input sequence, which
+// should be reversed and should lack a null-terminator.
 //
 // There must be at least one sequence, and all sequences
 // must be non-empty.
@@ -48,10 +49,10 @@ func (e *Encoder) Apply(seqs anyseq.Seq) anydiff.Res {
 func (e *Encoder) Encode(s string) anyvec.Vector {
 	inSeq := []anyvec.Vector{}
 	cr := e.Block.(anynet.Parameterizer).Parameters()[0].Vector.Creator()
-	for _, x := range []byte(s) {
-		inSeq = append(inSeq, oneHot(cr, x))
+	byteString := []byte(s)
+	for i := len(byteString) - 1; i >= 0; i-- {
+		inSeq = append(inSeq, oneHot(cr, byteString[i]))
 	}
-	inSeq = append(inSeq, oneHot(cr, 0))
 	seqs := anyseq.ConstSeqList([][]anyvec.Vector{inSeq})
 	return e.Apply(seqs).Output()
 }

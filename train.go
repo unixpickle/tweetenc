@@ -41,23 +41,34 @@ func (t *Trainer) Fetch(s anysgd.SampleList) (anysgd.Batch, error) {
 		guideSeqs[i] = seq[:len(seq)-1]
 	}
 
+	revIn := make([][]anyvec.Vector, s.Len())
+	for i, seq := range guideSeqs {
+		var rev []anyvec.Vector
+		// Skip index 0 since that's a null-terminator.
+		for j := len(seq) - 1; j > 0; j-- {
+			rev = append(rev, seq[j])
+		}
+		revIn[i] = rev
+	}
+
 	return &trainerBatch{
-		InSeqs: anyseq.ConstSeqList(inSeqs),
-		Guide:  anyseq.ConstSeqList(guideSeqs),
+		ReversedIn: anyseq.ConstSeqList(revIn),
+		Desired:    anyseq.ConstSeqList(inSeqs),
+		Guide:      anyseq.ConstSeqList(guideSeqs),
 	}, nil
 }
 
 // TotalCost computes the average cost for the batch.
 func (t *Trainer) TotalCost(b anysgd.Batch) anydiff.Res {
 	tb := b.(*trainerBatch)
-	batchSize := len(tb.InSeqs.Output()[0].Present)
-	encoded := t.Encoder.Apply(tb.InSeqs)
+	batchSize := len(tb.Desired.Output()[0].Present)
+	encoded := t.Encoder.Apply(tb.ReversedIn)
 	decoded := t.Decoder.Guided(encoded, tb.Guide, batchSize)
 
 	var idx int
 	var costCount int
 	allCosts := anyseq.Map(decoded, func(a anydiff.Res, n int) anydiff.Res {
-		desired := tb.InSeqs.Output()[idx]
+		desired := tb.Desired.Output()[idx]
 		costCount += desired.NumPresent()
 		idx++
 		c := anynet.DotCost{}.Cost(anydiff.NewConst(desired.Packed), a, n)
@@ -94,8 +105,9 @@ func (t *Trainer) creator() anyvec.Creator {
 }
 
 type trainerBatch struct {
-	InSeqs anyseq.Seq
-	Guide  anyseq.Seq
+	ReversedIn anyseq.Seq
+	Desired    anyseq.Seq
+	Guide      anyseq.Seq
 }
 
 func oneHot(c anyvec.Creator, b byte) anyvec.Vector {
