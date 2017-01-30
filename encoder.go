@@ -45,14 +45,18 @@ func (e *Encoder) Apply(seqs anyseq.Seq) anydiff.Res {
 	return anyseq.Tail(outSeq)
 }
 
-// Encode encodes a string to a vector.
-func (e *Encoder) Encode(s string) anyvec.Vector {
-	inSeq := []anyvec.Vector{}
-	cr := e.Block.(anynet.Parameterizer).Parameters()[0].Vector.Creator()
-	byteString := []byte(s)
-	for i := len(byteString) - 1; i >= 0; i-- {
-		inSeq = append(inSeq, oneHot(cr, byteString[i]))
+// Encode encodes strings to a packed vector.
+func (e *Encoder) Encode(samples ...string) anyvec.Vector {
+	var inSeqs [][]anyvec.Vector
+	for _, s := range samples {
+		inSeq := []anyvec.Vector{}
+		cr := e.Block.(anynet.Parameterizer).Parameters()[0].Vector.Creator()
+		byteString := []byte(s)
+		for i := len(byteString) - 1; i >= 0; i-- {
+			inSeq = append(inSeq, oneHot(cr, byteString[i]))
+		}
+		inSeqs = append(inSeqs, inSeq)
 	}
-	seqs := anyseq.ConstSeqList([][]anyvec.Vector{inSeq})
+	seqs := anyseq.ConstSeqList(inSeqs)
 	return e.Apply(seqs).Output()
 }
