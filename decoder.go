@@ -22,11 +22,12 @@ type Decoder struct {
 
 // NewDecoder creates a Decoder with a default structure.
 func NewDecoder(c anyvec.Creator, encodedSize, stateSize int) *Decoder {
+	scaler := c.MakeNumeric(16)
 	return &Decoder{
 		Block: anyrnn.Stack{
-			anyrnn.NewLSTM(c, 0x100, stateSize),
-			anyrnn.NewLSTM(c, stateSize, stateSize),
-			anyrnn.NewLSTM(c, stateSize, stateSize),
+			anyrnn.NewLSTM(c, 0x100, stateSize).ScaleInWeights(scaler),
+			anyrnn.NewLSTM(c, stateSize, stateSize).ScaleInWeights(scaler),
+			anyrnn.NewLSTM(c, stateSize, stateSize).ScaleInWeights(scaler),
 			&anyrnn.LayerBlock{
 				Layer: anynet.Net{
 					anynet.NewFC(c, stateSize, 0x100),

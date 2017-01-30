@@ -15,11 +15,12 @@ type Encoder struct {
 
 // NewEncoder creates an Encoder.
 func NewEncoder(c anyvec.Creator, encodedSize, stateSize int) *Encoder {
+	scaler := c.MakeNumeric(16)
 	return &Encoder{
 		Block: anyrnn.Stack{
-			anyrnn.NewLSTM(c, 0x100, stateSize),
-			anyrnn.NewLSTM(c, stateSize, stateSize),
-			anyrnn.NewLSTM(c, stateSize, stateSize),
+			anyrnn.NewLSTM(c, 0x100, stateSize).ScaleInWeights(scaler),
+			anyrnn.NewLSTM(c, stateSize, stateSize).ScaleInWeights(scaler),
+			anyrnn.NewLSTM(c, stateSize, stateSize).ScaleInWeights(scaler),
 			&anyrnn.LayerBlock{
 				Layer: anynet.Net{
 					anynet.NewFC(c, stateSize, encodedSize),
