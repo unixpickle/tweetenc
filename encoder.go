@@ -14,14 +14,15 @@ type Encoder struct {
 }
 
 // NewEncoder creates an Encoder.
-func NewEncoder(c anyvec.Creator, encodedSize int) *Encoder {
+func NewEncoder(c anyvec.Creator, encodedSize, stateSize int) *Encoder {
 	return &Encoder{
 		Block: anyrnn.Stack{
-			anyrnn.NewLSTM(c, 0x100, 512),
-			anyrnn.NewLSTM(c, 512, 512),
+			anyrnn.NewLSTM(c, 0x100, stateSize),
+			anyrnn.NewLSTM(c, stateSize, stateSize),
+			anyrnn.NewLSTM(c, stateSize, stateSize),
 			&anyrnn.LayerBlock{
 				Layer: anynet.Net{
-					anynet.NewFC(c, 512, encodedSize),
+					anynet.NewFC(c, stateSize, encodedSize),
 					anynet.Tanh,
 				},
 			},

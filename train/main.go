@@ -23,6 +23,7 @@ func main() {
 	var decPath string
 	var latent int
 	var batchSize int
+	var stateSize int
 	var stepSize float64
 
 	flag.StringVar(&dataPath, "data", "", "data CSV file")
@@ -30,6 +31,7 @@ func main() {
 	flag.StringVar(&decPath, "decoder", "dec_out", "decoder network path")
 	flag.IntVar(&latent, "latent", 128, "latent vector size")
 	flag.IntVar(&batchSize, "batch", 16, "SGD batch size")
+	flag.IntVar(&stateSize, "state", 512, "LSTM state size")
 	flag.Float64Var(&stepSize, "step", 0.001, "SGD step size")
 
 	flag.Parse()
@@ -39,7 +41,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	enc, dec := createOrLoad(encPath, decPath, latent)
+	enc, dec := createOrLoad(encPath, decPath, latent, stateSize)
 
 	log.Println("Loading samples...")
 	samples, err := tweetenc.ReadSampleList(dataPath)
@@ -84,17 +86,17 @@ func main() {
 	}
 }
 
-func createOrLoad(enc, dec string, latent int) (*tweetenc.Encoder, *tweetenc.Decoder) {
+func createOrLoad(enc, dec string, latent, state int) (*tweetenc.Encoder, *tweetenc.Decoder) {
 	encRes := &tweetenc.Encoder{}
 	if err := serializer.LoadAny(enc, &encRes.Block); err != nil {
 		log.Println("Creating new encoder...")
-		encRes = tweetenc.NewEncoder(anyvec32.CurrentCreator(), latent)
+		encRes = tweetenc.NewEncoder(anyvec32.CurrentCreator(), latent, state)
 	}
 
 	decRes := &tweetenc.Decoder{}
 	if err := serializer.LoadAny(dec, &decRes.Block, &decRes.StateMapper); err != nil {
 		log.Println("Creating new decoder...")
-		decRes = tweetenc.NewDecoder(anyvec32.CurrentCreator(), latent)
+		decRes = tweetenc.NewDecoder(anyvec32.CurrentCreator(), latent, state)
 	}
 
 	return encRes, decRes

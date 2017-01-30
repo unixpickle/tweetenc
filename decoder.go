@@ -21,20 +21,21 @@ type Decoder struct {
 }
 
 // NewDecoder creates a Decoder with a default structure.
-func NewDecoder(c anyvec.Creator, encodedSize int) *Decoder {
+func NewDecoder(c anyvec.Creator, encodedSize, stateSize int) *Decoder {
 	return &Decoder{
 		Block: anyrnn.Stack{
-			anyrnn.NewLSTM(c, 0x100, 512),
-			anyrnn.NewLSTM(c, 512, 512),
+			anyrnn.NewLSTM(c, 0x100, stateSize),
+			anyrnn.NewLSTM(c, stateSize, stateSize),
+			anyrnn.NewLSTM(c, stateSize, stateSize),
 			&anyrnn.LayerBlock{
 				Layer: anynet.Net{
-					anynet.NewFC(c, 512, 0x100),
+					anynet.NewFC(c, stateSize, 0x100),
 					anynet.LogSoftmax,
 				},
 			},
 		},
 		StateMapper: anynet.Net{
-			anynet.NewFC(c, encodedSize, 512*4),
+			anynet.NewFC(c, encodedSize, stateSize*6),
 		},
 	}
 }
