@@ -41,13 +41,13 @@ func main() {
 	}
 
 	enc := &tweetenc.Encoder{}
-	if err := serializer.LoadAny(encFile, &enc.Block); err != nil {
+	if err := serializer.LoadAny(encFile, &enc); err != nil {
 		fmt.Fprintln(os.Stderr, "load encoder:", err)
 		os.Exit(1)
 	}
 
 	dec := &tweetenc.Decoder{}
-	if err := serializer.LoadAny(decFile, &dec.Block, &dec.StateMapper); err != nil {
+	if err := serializer.LoadAny(decFile, &dec); err != nil {
 		fmt.Fprintln(os.Stderr, "load decoder:", err)
 		os.Exit(1)
 	}

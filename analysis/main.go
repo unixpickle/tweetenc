@@ -36,7 +36,7 @@ func main() {
 
 	log.Println("Loading encoder...")
 	var encoder tweetenc.Encoder
-	if err := serializer.LoadAny(encPath, &encoder.Block); err != nil {
+	if err := serializer.LoadAny(encPath, &encoder); err != nil {
 		fmt.Fprintln(os.Stderr, "Failed to load encoder:", err)
 		os.Exit(1)
 	}

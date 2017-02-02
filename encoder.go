@@ -45,12 +45,12 @@ func NewEncoder(c anyvec.Creator, encodedSize, stateSize int) *Encoder {
 			anyrnn.NewLSTM(c, 0x100, stateSize).ScaleInWeights(scaler),
 			anyrnn.NewLSTM(c, stateSize, stateSize).ScaleInWeights(scaler),
 			anyrnn.NewLSTM(c, stateSize, stateSize).ScaleInWeights(scaler),
-			&anyrnn.LayerBlock{
-				Layer: anynet.Net{
-					anynet.NewFC(c, stateSize, encodedSize),
-					anynet.Tanh,
-				},
-			},
+		},
+		MeanEncoder: anynet.Net{
+			anynet.NewFC(c, stateSize, encodedSize),
+		},
+		StddevEncoder: anynet.Net{
+			anynet.NewFC(c, stateSize, encodedSize),
 		},
 	}
 }

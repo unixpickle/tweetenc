@@ -1,12 +1,20 @@
 package tweetenc
 
 import (
+	"errors"
+
 	"github.com/unixpickle/anydiff"
 	"github.com/unixpickle/anydiff/anyseq"
 	"github.com/unixpickle/anynet"
 	"github.com/unixpickle/anynet/anyrnn"
 	"github.com/unixpickle/anyvec"
+	"github.com/unixpickle/serializer"
 )
+
+func init() {
+	var d Decoder
+	serializer.RegisterTypedDeserializer(d.SerializerType(), DeserializeDecoder)
+}
 
 // A Decoder decodes vectors into strings of bytes.
 type Decoder struct {
@@ -18,6 +26,16 @@ type Decoder struct {
 	// StateMapper maps the vectors from the encoder to state
 	// vectors for the decoder block.
 	StateMapper anynet.Layer
+}
+
+// DeserializeDecoder deserializes a Decoder.
+func DeserializeDecoder(d []byte) (*Decoder, error) {
+	var b anyrnn.Stack
+	var m anynet.Layer
+	if err := serializer.DeserializeAny(d, &b, &m); err != nil {
+		return nil, errors.New("deserialize Decoder: " + err.Error())
+	}
+	return &Decoder{Block: b, StateMapper: m}, nil
 }
 
 // NewDecoder creates a Decoder with a default structure.
@@ -78,6 +96,17 @@ func (d *Decoder) Unguided(encoded anyvec.Vector) []byte {
 		input = oneHot(encoded.Creator(), max)
 	}
 	return res
+}
+
+// SerializerType returns the unique ID used to serialize
+// a Decoder with the serializer package.
+func (d *Decoder) SerializerType() string {
+	return "github.com/unixpickle/tweetenc.Decoder"
+}
+
+// Serialize serializes the Decoder.
+func (d *Decoder) Serialize() ([]byte, error) {
+	return serializer.SerializeAny(d.Block, d.StateMapper)
 }
 
 func (d *Decoder) vecToState(vec anyvec.Vector, batchSize int) anyrnn.State {

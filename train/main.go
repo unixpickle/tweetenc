@@ -79,11 +79,11 @@ func main() {
 
 	log.Println("Saving...")
 
-	if err := serializer.SaveAny(encPath, enc.Block); err != nil {
+	if err := serializer.SaveAny(encPath, enc); err != nil {
 		fmt.Fprintln(os.Stderr, "Failed to save encoder:", err)
 		os.Exit(1)
 	}
-	if err := serializer.SaveAny(decPath, dec.Block, dec.StateMapper); err != nil {
+	if err := serializer.SaveAny(decPath, dec); err != nil {
 		fmt.Fprintln(os.Stderr, "Failed to save decoder:", err)
 		os.Exit(1)
 	}
@@ -91,13 +91,13 @@ func main() {
 
 func createOrLoad(enc, dec string, latent, state int) (*tweetenc.Encoder, *tweetenc.Decoder) {
 	encRes := &tweetenc.Encoder{}
-	if err := serializer.LoadAny(enc, &encRes.Block); err != nil {
+	if err := serializer.LoadAny(enc, &encRes); err != nil {
 		log.Println("Creating new encoder...")
 		encRes = tweetenc.NewEncoder(anyvec32.CurrentCreator(), latent, state)
 	}
 
 	decRes := &tweetenc.Decoder{}
-	if err := serializer.LoadAny(dec, &decRes.Block, &decRes.StateMapper); err != nil {
+	if err := serializer.LoadAny(dec, &decRes); err != nil {
 		log.Println("Creating new decoder...")
 		decRes = tweetenc.NewDecoder(anyvec32.CurrentCreator(), latent, state)
 	}
