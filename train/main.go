@@ -25,6 +25,7 @@ func main() {
 	var batchSize int
 	var stateSize int
 	var stepSize float64
+	var klWeight float64
 
 	flag.StringVar(&dataPath, "data", "", "data CSV file")
 	flag.StringVar(&encPath, "encoder", "enc_out", "encoder network path")
@@ -33,6 +34,7 @@ func main() {
 	flag.IntVar(&batchSize, "batch", 16, "SGD batch size")
 	flag.IntVar(&stateSize, "state", 512, "LSTM state size")
 	flag.Float64Var(&stepSize, "step", 0.001, "SGD step size")
+	flag.Float64Var(&klWeight, "kl", 0, "importance of KL divergence term")
 
 	flag.Parse()
 
@@ -55,6 +57,7 @@ func main() {
 	tr := &tweetenc.Trainer{
 		Encoder: enc,
 		Decoder: dec,
+		KL:      klWeight,
 	}
 
 	var iter int

@@ -16,7 +16,18 @@ type Trainer struct {
 	Encoder *Encoder
 	Decoder *Decoder
 
+	// KL determines how much effect the KL-divergence term
+	// has on the cost.
+	// As this increases towards 1, the auto-encoder becomes
+	// more and more of a VAE.
+	KL float64
+
+	// LastCost is set every time Gradient is called.
 	LastCost anyvec.Numeric
+
+	// Iteration is incremented for every Gradient call and
+	// is passed to KLAmount to compute the rate.
+	Iteration int
 }
 
 // Fetch produces a batch that represents the training
@@ -62,22 +73,40 @@ func (t *Trainer) Fetch(s anysgd.SampleList) (anysgd.Batch, error) {
 func (t *Trainer) TotalCost(b anysgd.Batch) anydiff.Res {
 	tb := b.(*trainerBatch)
 	batchSize := len(tb.Desired.Output()[0].Present)
-	encoded := t.Encoder.Apply(tb.ReversedIn)
-	decoded := t.Decoder.Guided(encoded, tb.Guide, batchSize)
+	return t.Encoder.Apply(tb.ReversedIn, func(mean, logStddev anydiff.Res) anydiff.Res {
+		c := mean.Output().Creator()
 
-	var idx int
-	var costCount int
-	allCosts := anyseq.Map(decoded, func(a anydiff.Res, n int) anydiff.Res {
-		desired := tb.Desired.Output()[idx]
-		costCount += desired.NumPresent()
-		idx++
-		c := anynet.DotCost{}.Cost(anydiff.NewConst(desired.Packed), a, n)
-		return c
+		stddev := anydiff.Exp(logStddev)
+		noise := c.MakeVector(mean.Output().Len())
+		anyvec.Rand(noise, anyvec.Normal, nil)
+		sampled := anydiff.Add(mean, anydiff.Mul(anydiff.NewConst(noise), stddev))
+
+		decoded := t.Decoder.Guided(sampled, tb.Guide, batchSize)
+
+		var idx int
+		var costCount int
+		allCosts := anyseq.Map(decoded, func(a anydiff.Res, n int) anydiff.Res {
+			desired := tb.Desired.Output()[idx]
+			costCount += desired.NumPresent()
+			idx++
+			c := anynet.DotCost{}.Cost(anydiff.NewConst(desired.Packed), a, n)
+			return c
+		})
+
+		sum := anydiff.Sum(anyseq.Sum(allCosts))
+
+		variances := anydiff.Square(stddev)
+		klDivergence := anydiff.AddScaler(
+			anydiff.Add(anydiff.Sum(variances), anydiff.Dot(mean, mean)),
+			c.MakeNumeric(float64(-mean.Output().Len())),
+		)
+		klDivergence = anydiff.Scale(klDivergence, c.MakeNumeric(0.5))
+		klDivergence = anydiff.Sub(klDivergence, anydiff.Sum(logStddev))
+		klDivergence = anydiff.Scale(klDivergence, c.MakeNumeric(t.KL))
+
+		scaler := c.MakeNumeric(1 / float64(costCount))
+		return anydiff.Scale(anydiff.Add(sum, klDivergence), scaler)
 	})
-
-	sum := anydiff.Sum(anyseq.Sum(allCosts))
-	scaler := sum.Output().Creator().MakeNumeric(1 / float64(costCount))
-	return anydiff.Scale(sum, scaler)
 }
 
 // Gradient computes a gradient for the batch and also
