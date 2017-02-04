@@ -10,6 +10,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/unixpickle/anydiff"
+	"github.com/unixpickle/anydiff/anyseq"
+	"github.com/unixpickle/anynet"
 	"github.com/unixpickle/anynet/anysgd"
 	"github.com/unixpickle/anyvec"
 	"github.com/unixpickle/serializer"
@@ -51,7 +54,9 @@ func main() {
 
 	log.Println("Computing statistics...")
 
-	var mean, secondMoment anyvec.Vector
+	var centers, logStddevs []anyvec.Vector
+	var batchSizes []int
+
 	var count int
 	for i := 0; i < numSamples; i += batchSize {
 		batch := samples.Slice(i, i+batchSize)
@@ -59,39 +64,81 @@ func main() {
 		for j := 0; j < batch.Len(); j++ {
 			strs = append(strs, string(batch.(tweetenc.SampleList)[j]))
 		}
-		outs := encoder.Encode(strs...)
-		outsSq := outs.Copy()
-		outsSq.Mul(outs)
-		thisSum := anyvec.SumRows(outs, outs.Len()/batch.Len())
-		thisSumSq := anyvec.SumRows(outsSq, outs.Len()/batch.Len())
-		if mean == nil {
-			mean = thisSum
-			secondMoment = thisSumSq
-		} else {
-			mean.Add(thisSum)
-			secondMoment.Add(thisSumSq)
-		}
+		c, l := evalSeqs(encoder, strs)
+		centers = append(centers, c)
+		logStddevs = append(logStddevs, l)
+		batchSizes = append(batchSizes, batch.Len())
 		count += batch.Len()
 		log.Printf("Processed %d samples", count)
 	}
 
-	divisor := mean.Creator().MakeNumeric(1 / float64(count))
-	mean.Scale(divisor)
-	secondMoment.Scale(divisor)
+	centerMean, centerStddev := stats(centers, batchSizes)
+	lsMean, lsStddev := stats(logStddevs, batchSizes)
 
-	meanSq := mean.Copy()
-	meanSq.Mul(mean)
-	stddev := secondMoment.Copy()
+	printStats(centerMean, centerStddev, lsMean, lsStddev)
+}
+
+func printStats(centerMean, centerStd, lsMean, lsStd anyvec.Vector) {
+	for i := 0; i < centerMean.Len(); i++ {
+		meanVal := anyvec.Sum(centerMean.Slice(i, i+1))
+		stdVal := anyvec.Sum(centerStd.Slice(i, i+1))
+		lsMean := anyvec.Sum(lsMean.Slice(i, i+1))
+		lsStd := anyvec.Sum(lsStd.Slice(i, i+1))
+		fmt.Printf("%d\tE[μ]=%.3f\tσ(μ)=%.3f\tE[ln(σ)]=%.3f\tσ(ln(σ))=%.3f\n",
+			i, meanVal, stdVal, lsMean, lsStd)
+	}
+}
+
+func stats(vals []anyvec.Vector, batches []int) (mean, stddev anyvec.Vector) {
+	var moment1, moment2 anyvec.Vector
+	var count int
+	for i, x := range vals {
+		x2 := x.Copy()
+		x2.Mul(x)
+		xSum := anyvec.SumRows(x, x.Len()/batches[i])
+		x2Sum := anyvec.SumRows(x2, x2.Len()/batches[i])
+		if moment1 == nil {
+			moment1 = xSum
+			moment2 = x2Sum
+		} else {
+			moment1.Add(xSum)
+			moment2.Add(x2Sum)
+		}
+		count += batches[i]
+	}
+
+	divisor := moment1.Creator().MakeNumeric(1 / float64(count))
+	moment1.Scale(divisor)
+	moment2.Scale(divisor)
+
+	meanSq := moment1.Copy()
+	meanSq.Mul(moment1)
+	stddev = moment2.Copy()
 	stddev.Sub(meanSq)
 	anyvec.Pow(stddev, stddev.Creator().MakeNumeric(0.5))
 
-	printStats(mean, stddev)
+	return moment1, stddev
 }
 
-func printStats(mean, stddev anyvec.Vector) {
-	for i := 0; i < mean.Len(); i++ {
-		meanVal := anyvec.Sum(mean.Slice(i, i+1))
-		stdVal := anyvec.Sum(stddev.Slice(i, i+1))
-		fmt.Printf("%d\tmean=%.3f\tstddev=%.3f\n", i, meanVal, stdVal)
+func evalSeqs(e *tweetenc.Encoder, samples []string) (center, logStddev anyvec.Vector) {
+	var inSeqs [][]anyvec.Vector
+	for _, s := range samples {
+		inSeq := []anyvec.Vector{}
+		cr := e.Block.(anynet.Parameterizer).Parameters()[0].Vector.Creator()
+		byteString := []byte(s)
+		for i := len(byteString) - 1; i >= 0; i-- {
+			inVec := make([]float64, 0x100)
+			inVec[int(byteString[i])] = 1
+			oneHot := cr.MakeVectorData(cr.MakeNumericList(inVec))
+			inSeq = append(inSeq, oneHot)
+		}
+		inSeqs = append(inSeqs, inSeq)
 	}
+	seqs := anyseq.ConstSeqList(inSeqs)
+	e.Apply(seqs, func(mean, stddev anydiff.Res) anydiff.Res {
+		center = mean.Output().Copy()
+		logStddev = stddev.Output().Copy()
+		return mean
+	})
+	return
 }
