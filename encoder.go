@@ -11,6 +11,18 @@ import (
 	"github.com/unixpickle/serializer"
 )
 
+// initStddevBias influences the initial standard
+// deviations predicted by an Encoder.
+// This value is in the log domain.
+//
+// A negative value means that the predictions will be
+// subject to less gaussian noise than they would with
+// a standard deviation of 1.
+//
+// A value of -2 starts the predictions' stddev values at
+// roughly e^-2.
+const initStddevBias = -2
+
 func init() {
 	var e Encoder
 	serializer.RegisterTypedDeserializer(e.SerializerType(), DeserializeEncoder)
@@ -40,6 +52,8 @@ func DeserializeEncoder(d []byte) (*Encoder, error) {
 // NewEncoder creates an Encoder.
 func NewEncoder(c anyvec.Creator, encodedSize, stateSize int) *Encoder {
 	scaler := c.MakeNumeric(16)
+	stddevLayer := anynet.NewFC(c, stateSize, encodedSize)
+	stddevLayer.Biases.Vector.AddScaler(c.MakeNumeric(initStddevBias))
 	return &Encoder{
 		Block: anyrnn.Stack{
 			anyrnn.NewLSTM(c, 0x100, stateSize).ScaleInWeights(scaler),
@@ -50,7 +64,7 @@ func NewEncoder(c anyvec.Creator, encodedSize, stateSize int) *Encoder {
 			anynet.NewFC(c, stateSize, encodedSize),
 		},
 		StddevEncoder: anynet.Net{
-			anynet.NewFC(c, stateSize, encodedSize),
+			stddevLayer,
 		},
 	}
 }
