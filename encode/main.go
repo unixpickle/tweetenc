@@ -31,7 +31,7 @@ func main() {
 	}
 
 	log.Println("Loading encoder...")
-	var enc tweetenc.Encoder
+	var enc *tweetenc.Encoder
 	if err := serializer.LoadAny(encFile, &enc); err != nil {
 		essentials.Die("Load encoder:", err)
 	}
