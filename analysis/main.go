@@ -121,10 +121,10 @@ func stats(vals []anyvec.Vector, batches []int) (mean, stddev anyvec.Vector) {
 }
 
 func evalSeqs(e *tweetenc.Encoder, samples []string) (center, logStddev anyvec.Vector) {
+	cr := e.Block.(anynet.Parameterizer).Parameters()[0].Vector.Creator()
 	var inSeqs [][]anyvec.Vector
 	for _, s := range samples {
 		inSeq := []anyvec.Vector{}
-		cr := e.Block.(anynet.Parameterizer).Parameters()[0].Vector.Creator()
 		byteString := []byte(s)
 		for i := len(byteString) - 1; i >= 0; i-- {
 			inVec := make([]float64, 0x100)
@@ -134,7 +134,7 @@ func evalSeqs(e *tweetenc.Encoder, samples []string) (center, logStddev anyvec.V
 		}
 		inSeqs = append(inSeqs, inSeq)
 	}
-	seqs := anyseq.ConstSeqList(inSeqs)
+	seqs := anyseq.ConstSeqList(cr, inSeqs)
 	e.Apply(seqs, func(mean, stddev anydiff.Res) anydiff.Res {
 		center = mean.Output().Copy()
 		logStddev = stddev.Output().Copy()

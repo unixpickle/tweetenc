@@ -107,16 +107,16 @@ func (e *Encoder) Apply(s anyseq.Seq, f func(mean, logStddev anydiff.Res) anydif
 // probable encodings.
 func (e *Encoder) Encode(samples ...string) anyvec.Vector {
 	var inSeqs [][]anyvec.Vector
+	cr := e.Block.(anynet.Parameterizer).Parameters()[0].Vector.Creator()
 	for _, s := range samples {
 		inSeq := []anyvec.Vector{}
-		cr := e.Block.(anynet.Parameterizer).Parameters()[0].Vector.Creator()
 		byteString := []byte(s)
 		for i := len(byteString) - 1; i >= 0; i-- {
 			inSeq = append(inSeq, oneHot(cr, byteString[i]))
 		}
 		inSeqs = append(inSeqs, inSeq)
 	}
-	seqs := anyseq.ConstSeqList(inSeqs)
+	seqs := anyseq.ConstSeqList(cr, inSeqs)
 	return e.Apply(seqs, func(mean, stddev anydiff.Res) anydiff.Res {
 		return mean
 	}).Output()

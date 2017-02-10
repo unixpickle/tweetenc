@@ -63,9 +63,9 @@ func (t *Trainer) Fetch(s anysgd.SampleList) (anysgd.Batch, error) {
 	}
 
 	return &trainerBatch{
-		ReversedIn: anyseq.ConstSeqList(revIn),
-		Desired:    anyseq.ConstSeqList(inSeqs),
-		Guide:      anyseq.ConstSeqList(guideSeqs),
+		ReversedIn: anyseq.ConstSeqList(cr, revIn),
+		Desired:    anyseq.ConstSeqList(cr, inSeqs),
+		Guide:      anyseq.ConstSeqList(cr, guideSeqs),
 	}, nil
 }
 
