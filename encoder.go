@@ -76,11 +76,8 @@ func NewEncoder(c anyvec.Creator, encodedSize, stateSize int) *Encoder {
 // must be non-empty.
 //
 // The resulting mean and log-scale standard deviations
-// are passed to a function which should be used to
-// compute a final result.
-// This makes it possible to pool the mean and variances
-// and prevent multiple back-propagations.
-func (e *Encoder) Apply(s anyseq.Seq, f func(mean, logStddev anydiff.Res) anydiff.Res) anydiff.Res {
+// are returned, in that order.
+func (e *Encoder) Apply(s anyseq.Seq) anydiff.MultiRes {
 	if len(s.Output()) == 0 {
 		panic("must have at least one sequence")
 	}
@@ -90,22 +87,19 @@ func (e *Encoder) Apply(s anyseq.Seq, f func(mean, logStddev anydiff.Res) anydif
 	outSeq := anyrnn.Map(s, e.Block)
 	tail := anyseq.Tail(outSeq)
 
-	return anydiff.Pool(tail, func(tail anydiff.Res) anydiff.Res {
+	temp := anydiff.Fuse(tail)
+	return anydiff.PoolMulti(temp, func(reses []anydiff.Res) anydiff.MultiRes {
+		tail = reses[0]
 		n := s.Output()[0].NumPresent()
 		means := e.MeanEncoder.Apply(tail, n)
 		stddevs := e.StddevEncoder.Apply(tail, n)
-
-		return anydiff.Pool(means, func(means anydiff.Res) anydiff.Res {
-			return anydiff.Pool(stddevs, func(stddevs anydiff.Res) anydiff.Res {
-				return f(means, stddevs)
-			})
-		})
+		return anydiff.Fuse(means, stddevs)
 	})
 }
 
 // Encode encodes strings to a packed vector of the most
 // probable encodings.
-func (e *Encoder) Encode(samples ...string) anyvec.Vector {
+func (e *Encoder) Encode(samples ...string) (mean, logStddev anyvec.Vector) {
 	var inSeqs [][]anyvec.Vector
 	cr := e.Block.(anynet.Parameterizer).Parameters()[0].Vector.Creator()
 	for _, s := range samples {
@@ -117,9 +111,8 @@ func (e *Encoder) Encode(samples ...string) anyvec.Vector {
 		inSeqs = append(inSeqs, inSeq)
 	}
 	seqs := anyseq.ConstSeqList(cr, inSeqs)
-	return e.Apply(seqs, func(mean, stddev anydiff.Res) anydiff.Res {
-		return mean
-	}).Output()
+	out := e.Apply(seqs).Outputs()
+	return out[0], out[1]
 }
 
 // SerializerType returns the unique ID used to serialize

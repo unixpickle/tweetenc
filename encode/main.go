@@ -67,7 +67,7 @@ func main() {
 			records = append(records, rec)
 			samples = append(samples, rec[len(rec)-1])
 		}
-		encoded := enc.Encode(samples...)
+		encoded, _ := enc.Encode(samples...)
 		vecSize := encoded.Len() / len(records)
 		components := encoded.Data().([]float32)
 		for i, record := range records {

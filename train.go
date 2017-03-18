@@ -73,7 +73,11 @@ func (t *Trainer) Fetch(s anysgd.SampleList) (anysgd.Batch, error) {
 func (t *Trainer) TotalCost(b anysgd.Batch) anydiff.Res {
 	tb := b.(*trainerBatch)
 	batchSize := len(tb.Desired.Output()[0].Present)
-	return t.Encoder.Apply(tb.ReversedIn, func(mean, logStddev anydiff.Res) anydiff.Res {
+	multiEnc := t.Encoder.Apply(tb.ReversedIn)
+	res := anydiff.PoolMulti(multiEnc, func(reses []anydiff.Res) anydiff.MultiRes {
+		mean := reses[0]
+		logStddev := reses[1]
+
 		c := mean.Output().Creator()
 
 		stddev := anydiff.Exp(logStddev)
@@ -105,7 +109,10 @@ func (t *Trainer) TotalCost(b anysgd.Batch) anydiff.Res {
 		klDivergence = anydiff.Scale(klDivergence, c.MakeNumeric(t.KL))
 
 		scaler := c.MakeNumeric(1 / float64(costCount))
-		return anydiff.Scale(anydiff.Add(sum, klDivergence), scaler)
+		return anydiff.Fuse(anydiff.Scale(anydiff.Add(sum, klDivergence), scaler))
+	})
+	return anydiff.Unfuse(res, func(reses []anydiff.Res) anydiff.Res {
+		return reses[0]
 	})
 }
 

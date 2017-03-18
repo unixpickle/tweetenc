@@ -10,9 +10,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/unixpickle/anydiff"
-	"github.com/unixpickle/anydiff/anyseq"
-	"github.com/unixpickle/anynet"
 	"github.com/unixpickle/anynet/anysgd"
 	"github.com/unixpickle/anyvec"
 	"github.com/unixpickle/serializer"
@@ -121,24 +118,5 @@ func stats(vals []anyvec.Vector, batches []int) (mean, stddev anyvec.Vector) {
 }
 
 func evalSeqs(e *tweetenc.Encoder, samples []string) (center, logStddev anyvec.Vector) {
-	cr := e.Block.(anynet.Parameterizer).Parameters()[0].Vector.Creator()
-	var inSeqs [][]anyvec.Vector
-	for _, s := range samples {
-		inSeq := []anyvec.Vector{}
-		byteString := []byte(s)
-		for i := len(byteString) - 1; i >= 0; i-- {
-			inVec := make([]float64, 0x100)
-			inVec[int(byteString[i])] = 1
-			oneHot := cr.MakeVectorData(cr.MakeNumericList(inVec))
-			inSeq = append(inSeq, oneHot)
-		}
-		inSeqs = append(inSeqs, inSeq)
-	}
-	seqs := anyseq.ConstSeqList(cr, inSeqs)
-	e.Apply(seqs, func(mean, stddev anydiff.Res) anydiff.Res {
-		center = mean.Output().Copy()
-		logStddev = stddev.Output().Copy()
-		return mean
-	})
-	return
+	return e.Encode(samples...)
 }

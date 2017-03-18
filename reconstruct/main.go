@@ -55,15 +55,15 @@ func main() {
 	if numStops != 1 {
 		interpolate(startStr, endStr, enc, dec, numStops)
 	} else {
-		encoded := enc.Encode(startStr)
+		encoded, _ := enc.Encode(startStr)
 		decoded := dec.Unguided(encoded)
 		fmt.Println("Decoded to:", string(decoded))
 	}
 }
 
 func interpolate(start, end string, enc *tweetenc.Encoder, dec *tweetenc.Decoder, stops int) {
-	startVec := enc.Encode(start)
-	endVec := enc.Encode(end)
+	startVec, _ := enc.Encode(start)
+	endVec, _ := enc.Encode(end)
 
 	for i := 0; i < stops; i++ {
 		fracDone := float64(i) / float64(stops-1)
