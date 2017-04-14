@@ -100,7 +100,7 @@ func (t *Trainer) TotalCost(b anysgd.Batch) anydiff.Res {
 		sum := anydiff.Sum(anyseq.Sum(allCosts))
 
 		variances := anydiff.Square(stddev)
-		klDivergence := anydiff.AddScaler(
+		klDivergence := anydiff.AddScalar(
 			anydiff.Add(anydiff.Sum(variances), anydiff.Dot(mean, mean)),
 			c.MakeNumeric(float64(-mean.Output().Len())),
 		)

@@ -53,7 +53,7 @@ func DeserializeEncoder(d []byte) (*Encoder, error) {
 func NewEncoder(c anyvec.Creator, encodedSize, stateSize int) *Encoder {
 	scaler := c.MakeNumeric(16)
 	stddevLayer := anynet.NewFC(c, stateSize, encodedSize)
-	stddevLayer.Biases.Vector.AddScaler(c.MakeNumeric(initStddevBias))
+	stddevLayer.Biases.Vector.AddScalar(c.MakeNumeric(initStddevBias))
 	return &Encoder{
 		Block: anyrnn.Stack{
 			anyrnn.NewLSTM(c, 0x100, stateSize).ScaleInWeights(scaler),
